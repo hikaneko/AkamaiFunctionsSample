@@ -22,7 +22,7 @@ files = [{ source = "assets", destination = "/" }]
 
 [component.api-proxy]
 source = "spin.wasm"
-allowed_outbound_hosts = ["https://zuplo-proxy.akamai.tech"]
+allowed_outbound_hosts = ["https://zuplo-proxy.akamai.tech", "http://edc.edgesuite.net"]
 
 [component.api-proxy.build]
 command = "npm run build"
