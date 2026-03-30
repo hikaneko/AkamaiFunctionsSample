@@ -1,0 +1,180 @@
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Chat Powered by Akamai Functions and Zuplo</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-MMWXE1NJZY"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-MMWXE1NJZY');
+</script>
+</head>
+<body>
+    <div id="root"></div>
+    <script>
+        const { useState, useRef, useEffect, createElement: h } = React;
+        const GATEWAY_URL = '/api/chat';
+
+        function ZuploAIChat() {
+          const [apiKey, setApiKey] = useState('');
+          const [model, setModel] = useState('gemini-2.5-flash-lite');
+          const [messages, setMessages] = useState([]);
+          const [input, setInput] = useState('');
+          const [loading, setLoading] = useState(false);
+          const messagesEndRef = useRef(null);
+
+          const scrollToBottom = () => {
+            messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+          };
+
+          useEffect(() => {
+            scrollToBottom();
+          }, [messages]);
+
+          const sendMessage = async () => {
+            if (!input.trim() || !apiKey) return;
+
+            const userMessage = { role: 'user', content: input };
+            setMessages(prev => [...prev, userMessage]);
+            setInput('');
+            setLoading(true);
+
+            try {
+              const response = await fetch(GATEWAY_URL, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${apiKey}`
+                },
+                body: JSON.stringify({
+                  model: model,
+                  messages: [...messages, userMessage].map(m => ({
+                    role: m.role,
+                    content: m.content
+                  }))
+                })
+              });
+
+              if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`API Error: ${response.status} - ${errorText}`);
+              }
+
+              const data = await response.json();
+              const assistantMessage = {
+                role: 'assistant',
+                content: data.choices?.[0]?.message?.content || 'No response',
+                usage: data.usage || null,
+                model: data.model || null
+              };
+
+              setMessages(prev => [...prev, assistantMessage]);
+            } catch (error) {
+              setMessages(prev => [...prev, {
+                role: 'assistant',
+                content: `Error: ${error.message}`
+              }]);
+            } finally {
+              setLoading(false);
+            }
+          };
+
+          const handleKeyPress = (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              sendMessage();
+            }
+          };
+
+          return h('div', { className: "flex h-screen bg-gray-100" },
+            h('div', { className: "w-80 bg-white border-r border-gray-200 p-6 flex flex-col space-y-6" },
+              h('div', null,
+                h('h1', { className: "text-2xl font-bold text-gray-800 mb-6" }, 'AI Chat Powered by Akamai Functions and Zuplo'),
+                h('div', { className: "space-y-4" },
+                  h('div', null,
+                    h('label', { className: "block text-sm font-medium text-gray-700 mb-2" }, 'API Key'),
+                    h('input', {
+                      type: "password",
+                      value: apiKey,
+                      onChange: (e) => setApiKey(e.target.value),
+                      placeholder: "Enter your API key",
+                      className: "w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                    })
+                  )
+                )
+              ),
+
+              h('div', { className: "mt-auto pt-6 border-t border-gray-200" },
+                h('p', { className: "text-xs text-gray-500" }, 'Powered by Akamai Functions and Zuplo AI Gateway')
+              )
+            ),
+            h('div', { className: "flex-1 flex flex-col" },
+              h('div', { className: "flex-1 overflow-y-auto p-6 space-y-4" },
+                messages.length === 0 ?
+                  h('div', { className: "flex items-center justify-center h-full" },
+                    h('div', { className: "text-center" },
+                      h('h2', { className: "text-2xl font-semibold text-gray-700 mb-2" }, 'Welcome to AI Chat Powered by Fermyon and Zuplo'),
+                      h('p', { className: "text-gray-500" }, 'Enter your API key and start chatting')
+                    )
+                  ) :
+                  messages.map((msg, idx) =>
+                    h('div', {
+                      key: idx,
+                      className: `flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`
+                    },
+                      h('div', { className: "flex flex-col max-w-3xl items-" + (msg.role === 'user' ? 'end' : 'start') },
+                        h('div', {
+                          className: `rounded-lg px-4 py-3 ${msg.role === 'user' ? 'bg-blue-500 text-white' : 'bg-white text-gray-800 border border-gray-200'}`
+                        },
+                          h('p', { className: "whitespace-pre-wrap" }, msg.content)
+                        ),
+                        msg.role === 'assistant' && (msg.usage || msg.model) &&
+                          h('p', { className: "text-xs text-gray-400 mt-1 px-1" },
+                            [
+                              msg.model,
+                              msg.usage && `prompt: ${msg.usage.prompt_tokens} / completion: ${msg.usage.completion_tokens} / total: ${msg.usage.total_tokens} tokens`
+                            ].filter(Boolean).join(' · ')
+                          )
+                      )
+                    )
+                  ),
+                loading && h('div', { className: "flex justify-start" },
+                  h('div', { className: "bg-white text-gray-800 border border-gray-200 rounded-lg px-4 py-3" },
+                    'Loading...'
+                  )
+                ),
+                h('div', { ref: messagesEndRef })
+              ),
+              h('div', { className: "border-t border-gray-200 bg-white p-4" },
+                h('div', { className: "max-w-4xl mx-auto flex space-x-4" },
+                  h('textarea', {
+                    value: input,
+                    onChange: (e) => setInput(e.target.value),
+                    onKeyPress: handleKeyPress,
+                    placeholder: "Type your message...",
+                    disabled: !apiKey || loading,
+                    rows: 1,
+                    className: "flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  }),
+                  h('button', {
+                    onClick: sendMessage,
+                    disabled: !input.trim() || !apiKey || loading,
+                    className: "px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                  }, loading ? 'Sending...' : 'Send')
+                )
+              )
+            )
+          );
+        }
+
+        ReactDOM.render(h(ZuploAIChat), document.getElementById('root'));
+    </script>
+</body>
+</html>
