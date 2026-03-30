@@ -13,7 +13,7 @@ flowchart LR
     end
 
     subgraph Zuplo ["Zuplo AI Gateway"]
-        GW["Route / Auth / Rate Limit"]
+        GW["Route / Rate Limit"]
     end
 
     subgraph LLMs ["LLM Backends"]
