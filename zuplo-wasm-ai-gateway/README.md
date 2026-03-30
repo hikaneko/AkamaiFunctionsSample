@@ -4,22 +4,31 @@ An AI chat application running on **Akamai Functions** (Fermyon Spin / WebAssemb
 
 ## Architecture
 
-```
-Browser
-  │
-  ├── GET  /          → Static file server (spin-fileserver.wasm)
-  │                     Serves the React chat UI
-  │
-  └── POST /api/chat  → api-proxy (JS → Wasm)
-  │                     Forwards requests to Zuplo AI Gateway
-  │                     (zuplo-proxy.akamai.tech)
-  │
-  └── GET  /api/info  → api-proxy (JS → Wasm)
-                        Fetches the edge node's city and IP
-                        from edc.edgesuite.net
+```mermaid
+flowchart LR
+    Client["Client (Browser)"]
+
+    subgraph Akamai ["Akamai Functions - Globally Distributed"]
+        F["Wasm Function"]
+    end
+
+    subgraph Zuplo ["Zuplo AI Gateway"]
+        GW["Route / Auth / Rate Limit"]
+    end
+
+    subgraph LLMs ["LLM Backends"]
+        L1["LLM on Akamai Cloud"]
+        L2["OpenAI ChatGPT"]
+        L3["Google Gemini"]
+        L4["Other Providers"]
+    end
+
+    Client -->|"HTTPS (nearest edge)"| Akamai
+    F -->|"Proxy /api/chat"| Zuplo
+    GW --> L1 & L2 & L3 & L4
 ```
 
-The browser never connects directly to the upstream AI Gateway — all requests are proxied through the Wasm Function running on the Akamai edge node.
+The client always connects to the **nearest Akamai edge node**. The Wasm Function running on that node proxies the request to the Zuplo AI Gateway, which handles authentication, rate limiting, and routing to the appropriate LLM backend. The upstream Gateway URL is never exposed to the browser.
 
 ## Features
 
