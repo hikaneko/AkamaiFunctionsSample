@@ -6,6 +6,7 @@
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-MMWXE1NJZY"></script>
 <script>
@@ -19,6 +20,37 @@
 <body>
     <div id="root"></div>
     <script>
+        mermaid.initialize({ startOnLoad: false, theme: 'neutral' });
+
+        const ARCH_DIAGRAM = `flowchart LR
+    Client["Client (Browser)"]
+    subgraph Akamai ["Akamai Functions — Globally Distributed"]
+        F["Wasm Function"]
+    end
+    subgraph Zuplo ["Zuplo AI Gateway"]
+        GW["Route / Rate Limit"]
+    end
+    subgraph LLMs ["LLM Backends"]
+        L1["LLM on Akamai Cloud"]
+        L2["OpenAI ChatGPT"]
+        L3["Google Gemini"]
+        L4["Other Providers"]
+    end
+    Client -->|"HTTPS (nearest edge)"| Akamai
+    F -->|"Proxy /api/chat"| Zuplo
+    GW --> L1 & L2 & L3 & L4`;
+
+        function ArchDiagram() {
+          const ref = useRef(null);
+          useEffect(() => {
+            if (!ref.current) return;
+            mermaid.render('arch-svg', ARCH_DIAGRAM).then(({ svg }) => {
+              ref.current.innerHTML = svg;
+            });
+          }, []);
+          return h('div', { ref, className: "w-full" });
+        }
+
         const { useState, useRef, useEffect, createElement: h } = React;
         const GATEWAY_URL = '/api/chat';
 
@@ -131,10 +163,14 @@
             h('div', { className: "flex-1 flex flex-col" },
               h('div', { className: "flex-1 overflow-y-auto p-6 space-y-4" },
                 messages.length === 0 ?
-                  h('div', { className: "flex items-center justify-center h-full" },
+                  h('div', { className: "flex flex-col items-center justify-center h-full gap-8 px-4" },
                     h('div', { className: "text-center" },
-                      h('h2', { className: "text-2xl font-semibold text-gray-700 mb-2" }, 'Welcome to AI Chat Powered by Fermyon and Zuplo'),
-                      h('p', { className: "text-gray-500" }, 'Enter your API key and start chatting')
+                      h('h2', { className: "text-2xl font-semibold text-gray-700 mb-2" }, 'AI Chat Powered by Akamai Functions and Zuplo'),
+                      h('p', { className: "text-gray-400 text-sm" }, 'Enter your API key in the sidebar and start chatting')
+                    ),
+                    h('div', { className: "w-full max-w-3xl bg-white border border-gray-200 rounded-xl shadow-sm p-6" },
+                      h('p', { className: "text-xs font-semibold text-gray-400 uppercase tracking-widest mb-4" }, 'Architecture'),
+                      h(ArchDiagram)
                     )
                   ) :
                   messages.map((msg, idx) =>
