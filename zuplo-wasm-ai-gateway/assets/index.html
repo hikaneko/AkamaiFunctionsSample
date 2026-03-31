@@ -50,7 +50,10 @@
               if (el) {
                 el.style.width = '100%';
                 el.style.height = 'auto';
-                el.style.minHeight = '360px';
+                el.style.minHeight = '520px';
+                el.setAttribute('viewBox', el.getAttribute('viewBox') || '0 0 800 400');
+                el.removeAttribute('width');
+                el.removeAttribute('height');
               }
             });
           }, []);
