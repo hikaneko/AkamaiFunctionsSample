@@ -71,6 +71,14 @@ Open [http://localhost:3000](http://localhost:3000), enter your API key, and sta
 
 ### 4. Deploy to Akamai Functions
 
+If you have not authenticated yet, run the following command first:
+
+```bash
+spin aka login
+```
+
+Then deploy:
+
 ```bash
 spin aka deploy
 ```
