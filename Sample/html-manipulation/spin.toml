@@ -1,0 +1,19 @@
+spin_manifest_version = 2
+
+[application]
+name = "html-rewriter"
+version = "0.1.0"
+description = "Fetches HTML from upstream and rewrites relative links matching the pattern to absolute URLs"
+
+[[trigger.http]]
+route = "/..."
+component = "html-rewriter"
+
+[component.html-rewriter]
+source = "dist/html-rewriter.wasm"
+exclude_files = ["**/node_modules"]
+allowed_outbound_hosts = ["<Your Upstream URL>"]
+
+[component.html-rewriter.build]
+command = "npm run build"
+watch = ["src/**/*.js", "package.json"]

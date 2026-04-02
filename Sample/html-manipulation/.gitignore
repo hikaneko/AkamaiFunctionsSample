@@ -1,0 +1,6 @@
+node_modules/
+dist/
+build/
+*.wasm
+.DS_Store
+.spin-aka/
