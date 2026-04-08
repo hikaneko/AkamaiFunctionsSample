@@ -83,7 +83,7 @@ spin aka deploy
 ### 6. Register a cron job
 
 ```bash
-spin aka cron create --schedule "*/10 * * * *" --path-and-query "/poll" --name "my-cron-poller"
+spin aka crons create --schedule "*/10 * * * *" --path-and-query "/poll" --name "my-cron-poller"
 ```
 
 Verify the cron job was registered:
@@ -147,3 +147,6 @@ cron-poller/
 - `node_modules/`, `build/`, and `dist/` are excluded from the repository (generated at build/install time)
 - The Akamai Functions deploy state is stored in `.spin-aka/` which is also excluded
 - `build.mjs` includes a source map shim plugin that prevents `j2w` from failing on files in `node_modules/` that lack source maps
+
+## Link
+- https://developer.fermyon.com/wasm-functions/using-cron-jobs
