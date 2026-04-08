@@ -1,0 +1,19 @@
+spin_manifest_version = 2
+
+[application]
+name = "cron-poller"
+version = "0.1.0"
+description = "Periodically polls a target URL using Spin cron jobs"
+
+[[trigger.http]]
+route = "/poll"
+component = "poller"
+
+[component.poller]
+source = "dist/cron-poller.wasm"
+exclude_files = ["**/node_modules"]
+allowed_outbound_hosts = ["<TARGET_URL>"]
+
+[component.poller.build]
+command = "npm run build"
+watch = ["src/**/*.js", "package.json"]
