@@ -1,6 +1,19 @@
 const UPSTREAM_URL = "https://<your-zuplo-gateway>/v1/chat/completions";
 const EDC_URL = "http://edc.edgesuite.net/";
 
+// Injected server-side (never sent by the browser) so long-winded replies
+// don't slow down perceived response time in the UI.
+const CONCISE_SYSTEM_PROMPT =
+  "You are a concise assistant. Always keep answers as short as possible—get straight to the point, avoid preambles, repetition, and unnecessary elaboration. Always reply in the same language the user's most recent message is written in.";
+
+// Akamai Functions kills the whole invocation at 30s with an opaque 500.
+// Race our own timeout first so we control the response shape instead.
+const UPSTREAM_TIMEOUT_MS = 25000;
+
+function timeout(ms) {
+  return new Promise((resolve) => setTimeout(() => resolve({ kind: "timeout" }), ms));
+}
+
 addEventListener("fetch", async (event) => {
   event.respondWith(handleRequest(event.request));
 });
@@ -48,17 +61,52 @@ async function handleChat(req) {
   const authHeader = req.headers.get("authorization") || "";
 
   try {
-    const body = await req.arrayBuffer();
+    const rawBody = await req.text();
 
-    const upstream = await fetch(UPSTREAM_URL, {
+    let payload;
+    try {
+      payload = JSON.parse(rawBody);
+    } catch (err) {
+      return new Response(JSON.stringify({ error: "Invalid JSON body" }), {
+        status: 400,
+        headers: { "content-type": "application/json" },
+      });
+    }
+
+    payload.messages = [
+      { role: "system", content: CONCISE_SYSTEM_PROMPT },
+      ...(payload.messages || []),
+    ];
+    const body = JSON.stringify(payload);
+
+    const fetchPromise = fetch(UPSTREAM_URL, {
       method: "POST",
       headers: {
         "content-type": "application/json",
         "authorization": authHeader,
       },
       body: body,
-    });
+    }).then((r) => ({ kind: "response", response: r }));
 
+    // Swallow late rejections that arrive after the timeout has already won
+    // the race, so they don't surface as unhandled rejections.
+    const result = await Promise.race([
+      fetchPromise.catch((err) => ({ kind: "error", err })),
+      timeout(UPSTREAM_TIMEOUT_MS),
+    ]);
+
+    if (result.kind === "error") {
+      throw result.err;
+    }
+
+    if (result.kind === "timeout") {
+      return new Response(
+        JSON.stringify({ error: "timeout", message: "Upstream did not respond in time" }),
+        { status: 504, headers: { "content-type": "application/json" } }
+      );
+    }
+
+    const upstream = result.response;
     const responseBody = await upstream.arrayBuffer();
     const contentType = upstream.headers.get("content-type") || "application/json";
 
