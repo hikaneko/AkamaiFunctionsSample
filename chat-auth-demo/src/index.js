@@ -147,9 +147,18 @@ async function handleChat(req) {
     const responseBody = await upstream.arrayBuffer();
     const contentType = upstream.headers.get("content-type") || "application/json";
 
+    // Surface Zuplo's diagnostic headers (semantic cache status, etc.) to the
+    // browser — dropped otherwise since we rebuild the Response from scratch.
+    const passthroughHeaders = ["x-ai-gateway-cache", "cache-status", "x-process-time", "zp-rid"];
+    const headers = { "content-type": contentType };
+    for (const name of passthroughHeaders) {
+      const value = upstream.headers.get(name);
+      if (value) headers[name] = value;
+    }
+
     return new Response(responseBody, {
       status: upstream.status,
-      headers: { "content-type": contentType },
+      headers,
     });
   } catch (err) {
     return new Response(JSON.stringify({ error: err.message || "Upstream request failed" }), {

@@ -313,7 +313,8 @@
                 throw err;
               }
 
-              return await response.json();
+              const data = await response.json();
+              return { data, cacheStatus: response.headers.get('x-ai-gateway-cache') };
             } finally {
               clearTimeout(timer);
             }
@@ -325,13 +326,14 @@
             for (let attempt = 0; attempt <= MAX_AUTO_RETRIES; attempt++) {
               const startTime = performance.now();
               try {
-                const data = await attemptChat(payloadMessages);
+                const { data, cacheStatus } = await attemptChat(payloadMessages);
                 return {
                   role: 'assistant',
                   content: data.choices?.[0]?.message?.content || 'No response',
                   usage: data.usage || null,
                   model: data.model || null,
-                  latencyMs: performance.now() - startTime
+                  latencyMs: performance.now() - startTime,
+                  cacheStatus: cacheStatus || null
                 };
               } catch (error) {
                 const { retryable, kind } = classifyError(error.status, error);
@@ -452,12 +454,13 @@
                             onClick: retryLastMessage,
                             className: "mt-1.5 px-2.5 py-1 text-xs font-medium text-red-700 border border-red-200 rounded hover:bg-red-50"
                           }, 'Retry'),
-                        msg.role === 'assistant' && (msg.usage || msg.model || msg.latencyMs != null) &&
+                        msg.role === 'assistant' && (msg.usage || msg.model || msg.latencyMs != null || msg.cacheStatus) &&
                           h('p', { className: "text-xs text-slate-400 mt-1.5 px-1" },
                             [
                               msg.model,
                               msg.usage && `prompt: ${msg.usage.prompt_tokens} / completion: ${msg.usage.completion_tokens} / total: ${msg.usage.total_tokens} tokens`,
-                              msg.latencyMs != null && formatLatency(msg.latencyMs)
+                              msg.latencyMs != null && formatLatency(msg.latencyMs),
+                              msg.cacheStatus && `cache: ${msg.cacheStatus}`
                             ].filter(Boolean).join(' · ')
                           )
                       )
