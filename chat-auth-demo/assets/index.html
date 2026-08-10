@@ -51,30 +51,35 @@
     <script>
         mermaid.initialize({ startOnLoad: false, theme: 'neutral' });
 
-        const ARCH_DIAGRAM = `flowchart LR
-    Client["Client (Browser)"]
-    subgraph Akamai ["Akamai Functions"]
-        F["Wasm Function"]
+        const ARCH_DIAGRAM = `flowchart TB
+    subgraph Phase1["Phase 1 — Login"]
+        direction LR
+        C1["Client (Browser)"]
+        A1["Akamai Functions
+Wasm Function"]
+        AS["AAM auth-server
+/login issues JWT"]
+        C1 -->|"1. login"| A1
+        A1 -->|"2. proxy /login"| AS
+        AS -->|"3. JWT issued"| C1
     end
-    subgraph AuthZ ["AAM auth-server"]
-        L["/login issues JWT"]
+    subgraph Phase2["Phase 2 — Chat"]
+        direction LR
+        C2["Client (Browser)"]
+        A2["Akamai Functions
+Wasm Function"]
+        GW["AAM (AI Gateway) — chat-app
+jwt-auth-inbound checks JWT"]
+        M["LLM Backend on Akamai Cloud
+google-gemma-4-e4b-it"]
+        C2 -->|"4. chat + JWT"| A2
+        A2 -->|"5. proxy /chat (Bearer JWT)"| GW
+        GW -->|"6. valid JWT → forward"| M
+        M -->|"7. response"| GW
+        GW -->|"8. response"| A2
+        A2 -->|"9. response"| C2
     end
-    subgraph AAMGW ["AAM (AI Gateway) — chat-app"]
-        GW["jwt-auth-inbound checks JWT"]
-    end
-    subgraph LLM ["LLM Backend on Akamai Cloud"]
-        M["google-gemma-4-e4b-it"]
-    end
-    Client -->|"1. login"| Akamai
-    F -->|"2. proxy /login"| L
-    L -->|"3. JWT issued"| Client
-    Client -->|"4. chat + JWT"| Akamai
-    F -->|"5. proxy /chat (Bearer JWT)"| GW
-    GW -->|"6. valid JWT → forward"| M
-    M -->|"7. response"| GW
-    GW -->|"8. response"| F
-    F -->|"9. response"| Client
-    AuthZ ~~~ AAMGW`;
+    Phase1 --> Phase2`;
 
         function ArchDiagram() {
           const ref = useRef(null);
