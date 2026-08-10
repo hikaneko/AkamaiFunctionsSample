@@ -9,7 +9,11 @@ const CONCISE_SYSTEM_PROMPT =
 
 // Akamai Functions kills the whole invocation at 30s with an opaque 500.
 // Race our own timeout first so we control the response shape instead.
-const UPSTREAM_TIMEOUT_MS = 25000;
+// Kept well under 30s (not just a couple seconds under) because cold-start /
+// queueing delay before this function even starts running eats into the
+// margin — too tight a gap meant the browser's own CLIENT_TIMEOUT_MS was
+// firing first, discarding responses that actually succeeded upstream.
+const UPSTREAM_TIMEOUT_MS = 20000;
 
 function timeout(ms) {
   return new Promise((resolve) => setTimeout(() => resolve({ kind: "timeout" }), ms));
