@@ -28,3 +28,12 @@ An AI chat application that runs on Akamai Functions and uses [Zuplo](https://zu
 - Proxies `/api/chat` requests to the Zuplo AI Gateway, keeping the upstream URL hidden from the browser
 - Zuplo handles authentication, rate limiting, and routing to LLM backends (OpenAI, Gemini, etc.)
 - Exposes a `/api/info` endpoint that returns the IP and city of the running edge node
+
+### [chat-auth-demo](./chat-auth-demo)
+
+A login-gated AI chat application on Akamai Functions — only users who log in successfully can chat, backed by a JWT auth policy on the AAM (AI Gateway).
+
+- Serves a React-based chat UI with a username/password login form (no pasted API key)
+- Proxies `/api/login` to a token-issuing AAM auth-server, and `/api/chat` to a JWT-protected AAM (AI Gateway) route — the browser never talks to either upstream directly, only ever holding the short-lived JWT it received from login
+- Requests without a valid JWT (missing, expired, or tampered) are rejected with 401 before reaching the LLM backend
+- Exposes a `/api/info` endpoint that returns the IP and city of the running edge node
