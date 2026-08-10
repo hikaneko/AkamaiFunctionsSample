@@ -1,0 +1,29 @@
+#:schema https://schemas.spinframework.dev/spin/manifest-v2/latest.json
+
+spin_manifest_version = 2
+
+[application]
+name = "chat-auth-demo"
+version = "0.1.0"
+authors = ["hikaneko"]
+description = "Login-gated AI chat demo: Akamai Functions proxy in front of a JWT-issuing Zuplo auth server and a JWT-protected Zuplo AI Gateway route."
+
+[[trigger.http]]
+route = "/api/..."
+component = "api-proxy"
+
+[[trigger.http]]
+route = "/..."
+component = "chat-auth-demo-ui"
+
+[component.chat-auth-demo-ui]
+source = { url = "https://github.com/spinframework/spin-fileserver/releases/download/v0.3.0/spin_static_fs.wasm", digest = "sha256:ef88708817e107bf49985c7cefe4dd1f199bf26f6727819183d5c996baa3d148" }
+files = [{ source = "assets", destination = "/" }]
+
+[component.api-proxy]
+source = "spin.wasm"
+allowed_outbound_hosts = ["https://zuplo-auth-server-main-375181e.d2.zuplo.dev", "https://red-salamander-main-30e3b86.d2.zuplo.dev", "http://edc.edgesuite.net"]
+
+[component.api-proxy.build]
+command = "npm run build"
+watch = ["src/**/*.js", "package.json"]

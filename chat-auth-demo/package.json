@@ -1,0 +1,12 @@
+{
+  "name": "chat-auth-demo-api-proxy",
+  "version": "1.0.0",
+  "description": "API proxy component for the login-gated AI chat demo",
+  "scripts": {
+    "build": "node build.mjs",
+    "postinstall": "find ./node_modules -path '*@bytecodealliance/componentize-js/src/componentize.js' -exec sed -i '' 's/shell: true,$/shell: false,/' {} +"
+  },
+  "dependencies": {
+    "@fermyon/spin-sdk": "^3.2.0"
+  }
+}
