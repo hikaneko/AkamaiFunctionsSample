@@ -49,56 +49,63 @@
 <body>
     <div id="root"></div>
     <script>
-        mermaid.initialize({ startOnLoad: false, theme: 'neutral' });
+        mermaid.initialize({ startOnLoad: false, theme: 'neutral', themeVariables: { fontSize: '16px' } });
 
-        const ARCH_DIAGRAM = `flowchart TB
-    subgraph Phase1["Phase 1 — Login"]
-        direction LR
-        C1["Client (Browser)"]
-        A1["Akamai Functions
+        const AUTH_DIAGRAM = `flowchart LR
+    Client["Client
+Browser"]
+    Akamai["Akamai
+Functions"]
+    Auth["AAM
+auth-server"]
+    Client -->|"1. login"| Akamai
+    Akamai -->|"2. /login"| Auth
+    Akamai -->|"3. JWT"| Client`;
+
+        const CHAT_DIAGRAM = `flowchart LR
+    Client["Client
+Browser"]
+    Akamai["Akamai Functions
 Wasm Function"]
-        AS["AAM auth-server
-/login issues JWT"]
-        C1 -->|"1. login"| A1
-        A1 -->|"2. proxy /login"| AS
-        AS -->|"3. JWT issued"| C1
-    end
-    subgraph Phase2["Phase 2 — Chat"]
-        direction LR
-        C2["Client (Browser)"]
-        A2["Akamai Functions
-Wasm Function"]
-        GW["AAM (AI Gateway) — chat-app
-jwt-auth-inbound checks JWT"]
-        M["LLM Backend on Akamai Cloud
+    GW["AAM AI Gateway
+jwt-auth-inbound"]
+    LLM["LLM Backend
+Akamai Cloud
 google-gemma-4-e4b-it"]
-        C2 -->|"4. chat + JWT"| A2
-        A2 -->|"5. proxy /chat (Bearer JWT)"| GW
-        GW -->|"6. valid JWT → forward"| M
-        M -->|"7. response"| GW
-        GW -->|"8. response"| A2
-        A2 -->|"9. response"| C2
-    end
-    Phase1 --> Phase2`;
+    Client -->|"4. chat + JWT"| Akamai
+    Akamai -->|"5. /chat Bearer JWT"| GW
+    GW -->|"6. JWT valid → forward"| LLM`;
 
-        function ArchDiagram() {
+        function MermaidBlock({ id, title, diagram }) {
           const ref = useRef(null);
           useEffect(() => {
             if (!ref.current) return;
-            mermaid.render('arch-svg', ARCH_DIAGRAM).then(({ svg }) => {
+            mermaid.render(id, diagram).then(({ svg }) => {
               ref.current.innerHTML = svg;
               const el = ref.current.querySelector('svg');
               if (el) {
-                el.style.width = '100%';
-                el.style.height = 'auto';
-                el.style.minHeight = '520px';
-                el.setAttribute('viewBox', el.getAttribute('viewBox') || '0 0 800 400');
-                el.removeAttribute('width');
-                el.removeAttribute('height');
+                // Deliberately NOT scaling to the container width: mermaid
+                // renders both diagrams' text at the same fixed fontSize
+                // (see themeVariables above), so leaving each SVG at its
+                // own natural pixel size is what keeps the two diagrams'
+                // text visually identical in size. Stretching/shrinking
+                // either one independently is what caused the mismatch.
+                el.style.display = 'block';
+                el.style.margin = '0 auto';
               }
             });
           }, []);
-          return h('div', { ref, className: "w-full" });
+          return h('div', { className: "w-full" },
+            h('p', { className: "text-center text-sm font-semibold text-gray-500 tracking-widest uppercase pb-1 mb-3 border-b border-gray-200" }, title),
+            h('div', { ref, className: "overflow-x-auto" })
+          );
+        }
+
+        function ArchDiagram() {
+          return h('div', { className: "w-full space-y-8" },
+            h(MermaidBlock, { id: 'auth-svg', title: 'Authentication', diagram: AUTH_DIAGRAM }),
+            h(MermaidBlock, { id: 'chat-svg', title: 'Chat / Inference', diagram: CHAT_DIAGRAM })
+          );
         }
 
         const { useState, useRef, useEffect, createElement: h } = React;
